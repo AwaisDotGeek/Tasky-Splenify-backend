@@ -2,8 +2,10 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
 import { GroupController } from '../GroupController';
 import { groupService } from '../../services/GroupService';
+import { messageService } from '../../services/MessageService';
 
 jest.mock('../../services/GroupService');
+jest.mock('../../services/MessageService');
 
 describe('GroupController', () => {
   let groupController: GroupController;
@@ -94,11 +96,22 @@ describe('GroupController', () => {
   describe('getUserGroups', () => {
     it('should return user groups', async () => {
       const mockGroups = [
-        { id: 'group1', name: 'Group 1' },
-        { id: 'group2', name: 'Group 2' }
+        { 
+          _id: 'group1', 
+          name: 'Group 1',
+          toJSON: function() { return { id: 'group1', name: 'Group 1' }; }
+        },
+        { 
+          _id: 'group2', 
+          name: 'Group 2',
+          toJSON: function() { return { id: 'group2', name: 'Group 2' }; }
+        }
       ];
 
       (groupService.getUserGroups as jest.Mock).mockResolvedValue(mockGroups);
+      (messageService.getUnreadCounts as jest.Mock).mockResolvedValue({
+        'group1': 5
+      });
 
       await groupController.getUserGroups(
         mockRequest as AuthRequest,
@@ -107,10 +120,16 @@ describe('GroupController', () => {
       );
 
       expect(groupService.getUserGroups).toHaveBeenCalledWith('user123');
+      expect(messageService.getUnreadCounts).toHaveBeenCalledWith('user123');
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         status: 'success',
-        data: { groups: mockGroups }
+        data: { 
+          groups: [
+            { id: 'group1', name: 'Group 1', unreadCount: 5 },
+            { id: 'group2', name: 'Group 2', unreadCount: 0 }
+          ]
+        }
       });
     });
 

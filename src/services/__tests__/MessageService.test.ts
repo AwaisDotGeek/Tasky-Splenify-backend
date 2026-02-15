@@ -1,9 +1,11 @@
 import { MessageService } from '../MessageService';
 import { Message } from '../../models/Message';
+import { User } from '../../models/User';
 import { AppError } from '../../middleware/errorHandler';
 import mongoose from 'mongoose';
 
 jest.mock('../../models/Message');
+jest.mock('../../models/User');
 
 describe('MessageService', () => {
   let messageService: MessageService;
@@ -177,17 +179,17 @@ describe('MessageService', () => {
 
   describe('markAsRead', () => {
     it('should mark message as read', async () => {
-      (Message.findOneAndUpdate as jest.Mock).mockResolvedValue({});
+      const mockUser = {
+        conversationReadStatus: new Map(),
+        save: jest.fn().mockResolvedValue({})
+      };
+      (User.findById as jest.Mock).mockResolvedValue(mockUser);
 
       await messageService.markAsRead('msg123', validUserId1);
 
-      expect(Message.findOneAndUpdate).toHaveBeenCalledWith(
-        {
-          _id: 'msg123',
-          recipientId: validUserId1
-        },
-        { isRead: true }
-      );
+      expect(User.findById).toHaveBeenCalledWith(validUserId1);
+      expect(mockUser.conversationReadStatus.get('msg123')).toBeDefined();
+      expect(mockUser.save).toHaveBeenCalled();
     });
   });
 });

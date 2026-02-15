@@ -2,8 +2,10 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
 import { UserController } from '../UserController';
 import { userService } from '../../services/UserService';
+import { messageService } from '../../services/MessageService';
 
 jest.mock('../../services/UserService');
+jest.mock('../../services/MessageService');
 
 describe('UserController', () => {
   let userController: UserController;
@@ -29,11 +31,25 @@ describe('UserController', () => {
   describe('getAllUsers', () => {
     it('should return all users except current user', async () => {
       const mockUsers = [
-        { id: 'user456', name: 'User 1', email: 'user1@example.com' },
-        { id: 'user789', name: 'User 2', email: 'user2@example.com' }
+        { 
+          _id: 'user456', 
+          name: 'User 1', 
+          email: 'user1@example.com',
+          toJSON: function() { return { id: 'user456', name: 'User 1', email: 'user1@example.com' }; }
+        },
+        { 
+          _id: 'user789', 
+          name: 'User 2', 
+          email: 'user2@example.com',
+          toJSON: function() { return { id: 'user789', name: 'User 2', email: 'user2@example.com' }; }
+        }
       ];
 
       (userService.getAllUsers as jest.Mock).mockResolvedValue(mockUsers);
+      (messageService.getUnreadCounts as jest.Mock).mockResolvedValue({
+        'user456': 2,
+        'user789': 0
+      });
 
       await userController.getAllUsers(
         mockRequest as AuthRequest,
@@ -42,10 +58,16 @@ describe('UserController', () => {
       );
 
       expect(userService.getAllUsers).toHaveBeenCalledWith('user123');
+      expect(messageService.getUnreadCounts).toHaveBeenCalledWith('user123');
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith({
         status: 'success',
-        data: { users: mockUsers }
+        data: { 
+          users: [
+            { id: 'user456', name: 'User 1', email: 'user1@example.com', unreadCount: 2 },
+            { id: 'user789', name: 'User 2', email: 'user2@example.com', unreadCount: 0 }
+          ]
+        }
       });
     });
 
