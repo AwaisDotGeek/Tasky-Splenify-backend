@@ -23,14 +23,7 @@ export const initializeSocketServer = (httpServer: HTTPServer): Server => {
 
   const io = new Server(httpServer, {
     cors: {
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
+      origin: true,
       credentials: true
     }
   });
