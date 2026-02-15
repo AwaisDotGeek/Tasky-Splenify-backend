@@ -19,9 +19,18 @@ export const getIO = (): Server => {
 };
 
 export const initializeSocketServer = (httpServer: HTTPServer): Server => {
+  const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',');
+
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       credentials: true
     }
   });
